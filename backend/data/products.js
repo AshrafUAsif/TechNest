@@ -14,7 +14,7 @@ const products = [
   {
     _id: '2',
     name: 'iPhone 12 Pro 256GB Memory',
-    image: '/images/iPhone 12 Pro.jpg',
+    image: '/images/iPhone.jpg',
     description: 'Experience the next generation of smartphone technology with the iPhone 12 Pro. Features a 6.1-inch Super Retina XDR display and an advanced triple-camera system.',
     brand: 'Apple',
     category: 'Electronics',
