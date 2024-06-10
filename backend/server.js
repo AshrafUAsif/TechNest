@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
-import products from './data/products.js';
+import productRoutes from './routes/productRoutes.js';
 
 dotenv.config();
 
@@ -13,8 +13,6 @@ if (!mongoUri) {
   process.exit(1);
 }
 
-//console.log(`Mongo URI: ${mongoUri}`);
-
 connectDB(); // Connect to MongoDB
 
 const app = express();
@@ -25,18 +23,7 @@ app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
-app.get('/api/products', (req, res) => {
-  res.json(products);
-});
-
-app.get('/api/products/:id', (req, res) => {
-  const product = products.find((p) => p._id === req.params.id);
-  if (product) {
-    res.json(product);
-  } else {
-    res.status(404).json({ message: 'Product not found' });
-  }
-});
+app.use('/api/products', productRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -47,7 +34,6 @@ app.use((err, req, res, next) => {
 // Unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Application specific logging, throwing an error, or other logic here
   process.exit(1);
 });
 
