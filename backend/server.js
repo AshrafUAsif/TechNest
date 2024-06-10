@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import productRoutes from './routes/productRoutes.js';
+import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
 dotenv.config();
 
@@ -25,11 +26,11 @@ app.get('/', (req, res) => {
 
 app.use('/api/products', productRoutes);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
-});
+// Add the notFound middleware
+app.use(notFound);
+
+// Add the errorHandler middleware
+app.use(errorHandler);
 
 // Unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
