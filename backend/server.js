@@ -19,7 +19,9 @@ connectDB(); // Connect to MongoDB
 
 const app = express();
 
+// Body parser middleware
 app.use(express.json()); // Add middleware to parse JSON
+app.use(express.urlencoded({ extended: true }));
 
 app.get('/', (req, res) => {
   res.send('API is running...');
