@@ -1,17 +1,17 @@
 import React from "react";
+import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import {
-	Row,
-	Col,
-	ListGroup,
-	Image,
-	Form,
-	Button,
-	Card,
-} from "react-bootstrap";
+import { Row, Col, ListGroup, Image, Button, Card } from "react-bootstrap";
+import { toast } from "react-toastify";
+import { useSelector } from "react-redux";
+import { PayPalButtons, usePayPalScriptReducer } from "@paypal/react-paypal-js";
 import Message from "../components/Message";
 import Loader from "../components/Loader";
-import { useGetOrderDetailsQuery } from "../slices/ordersApiSlice";
+import {
+	useGetOrderDetailsQuery,
+	usePayOrderMutation,
+	useGetPayPalClientIdQuery,
+} from "../slices/ordersApiSlice";
 
 const OrderScreen = () => {
 	const { id: orderId } = useParams();
@@ -23,10 +23,92 @@ const OrderScreen = () => {
 		error,
 	} = useGetOrderDetailsQuery(orderId);
 
+	const [payOrder, { isLoading: loadingPay }] = usePayOrderMutation();
+
+	const [{ isPending }, paypalDispatch] = usePayPalScriptReducer();
+
+	const {
+		data: paypal,
+		isLoading: loadingPayPal,
+		error: errorPayPal,
+	} = useGetPayPalClientIdQuery();
+
+	const { userInfo } = useSelector((state) => state.auth);
+
+	useEffect(() => {
+		if (!errorPayPal && !loadingPayPal && paypal.clientId) {
+			const loadPayPalScript = async () => {
+				paypalDispatch({
+					type: "resetOptions",
+					value: {
+						"client-id": paypal.clientId,
+						currency: "EUR",
+					},
+				});
+				paypalDispatch({ type: "setLoadingStatus", value: "pending" });
+			};
+			if (order && !order.isPaid) {
+				if (!window.paypal) {
+					loadPayPalScript();
+				}
+			}
+		}
+	}, [order, paypal, paypalDispatch, loadingPayPal, errorPayPal]);
+
+	const onApprove = async (data, actions) => {
+		return actions.order.capture().then(async (details) => {
+			try {
+				await payOrder({ orderId, details });
+				refetch();
+				toast.success("Payment Successful");
+			} catch (error) {
+				toast.error(error?.data?.message || error.message);
+			}
+		});
+	};
+
+	const onApproveTest = async () => {
+		try {
+			const paymentResult = {
+				id: "TEST_ID",
+				status: "COMPLETED",
+				update_time: new Date().toISOString(),
+				payer: {
+					email_address: userInfo.email,
+				},
+			};
+			await payOrder({ orderId, details: paymentResult });
+			refetch();
+			toast.success("Payment Successful (Test Mode)");
+		} catch (error) {
+			toast.error(error?.data?.message || error.message);
+		}
+	};
+
+	const onError = (err) => {
+		toast.error(err.message);
+	};
+
+	const createOrder = (data, actions) => {
+		return actions.order
+			.create({
+				purchase_units: [
+					{
+						amount: {
+							value: order.totalPrice,
+						},
+					},
+				],
+			})
+			.then((orderId) => {
+				return orderId;
+			});
+	};
+
 	return isLoading ? (
 		<Loader />
 	) : error ? (
-		<Message variant="danger" />
+		<Message variant="danger">{error}</Message>
 	) : (
 		<>
 			<h1>Order {order._id} </h1>
@@ -74,17 +156,15 @@ const OrderScreen = () => {
 								<ListGroup.Item key={index}>
 									<Row>
 										<Col md={1}>
-											<Image src={item.image} alt={item.name} fluid rounder />
+											<Image src={item.image} alt={item.name} fluid rounded />
 										</Col>
 
-                    <Col>
-                      <Link to={`/product/${item.product}`}>
-                        {item.name}
-                      </Link>
-                    </Col>
-                    <Col md={4}>
-                      {item.qty} x €{item.price} = €{ item.qty * item.price }
-                    </Col>
+										<Col>
+											<Link to={`/product/${item.product}`}>{item.name}</Link>
+										</Col>
+										<Col md={4}>
+											{item.qty} x €{item.price} = €{item.qty * item.price}
+										</Col>
 									</Row>
 								</ListGroup.Item>
 							))}
@@ -92,38 +172,64 @@ const OrderScreen = () => {
 					</ListGroup>
 				</Col>
 				<Col md={4}>
-          <Card>
-            <ListGroup variant="flush">
-              <ListGroup.Item>
-                <h2>Order Summary</h2>
-              </ListGroup.Item>
+					<Card>
+						<ListGroup variant="flush">
+							<ListGroup.Item>
+								<h2>Order Summary</h2>
+							</ListGroup.Item>
 
-              <ListGroup.Item>
-                <Row>
-                  <Col>Items</Col>
-                  <Col>€{order.itemsPrice}</Col>
-                </Row>
+							<ListGroup.Item>
+								<Row>
+									<Col>Items</Col>
+									<Col>€{order.itemsPrice}</Col>
+								</Row>
 
-                <Row>
-                  <Col>Shipping</Col>
-                  <Col>€{order.shippingPrice}</Col>
-                </Row>
+								<Row>
+									<Col>Shipping</Col>
+									<Col>€{order.shippingPrice}</Col>
+								</Row>
 
-                <Row>
-                  <Col>Tax</Col>
-                  <Col>€{order.taxPrice}</Col>
-                </Row>
-                
-                <Row>
-                  <Col>Total</Col>
-                  <Col>€{order.totalPrice}</Col>
-                </Row>
-              </ListGroup.Item>
-              {/* PAY ORDER PLACEHOLDER */}
-              {/* MARK AS DELIVERED PLACEHOLDER */}
-            </ListGroup>
-          </Card>
-        </Col>
+								<Row>
+									<Col>Tax</Col>
+									<Col>€{order.taxPrice}</Col>
+								</Row>
+
+								<Row>
+									<Col>Total</Col>
+									<Col>€{order.totalPrice}</Col>
+								</Row>
+							</ListGroup.Item>
+
+							{!order.isPaid && (
+								<ListGroup.Item>
+									{loadingPay && <Loader />}
+
+									{isPending ? (
+										<Loader />
+									) : (
+										<div>
+											{/* <Button
+												onClick={onApproveTest}
+												style={{ marginBottom: "10px" }}
+											>
+												Test Pay Order
+											</Button> */}
+											<div>
+												<PayPalButtons
+													createOrder={createOrder}
+													onApprove={onApprove}
+													onError={onError}
+												></PayPalButtons>
+											</div>
+										</div>
+									)}
+								</ListGroup.Item>
+							)}
+
+							{/* MARK AS DELIVERED PLACEHOLDER */}
+						</ListGroup>
+					</Card>
+				</Col>
 			</Row>
 		</>
 	);
