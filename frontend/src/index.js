@@ -7,6 +7,7 @@ import {
 	RouterProvider,
 } from "react-router-dom";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
+import { HelmetProvider } from "react-helmet-async";
 import { Provider } from "react-redux";
 import store from "./store";
 //import 'bootstrap/dist/css/bootstrap.min.css';
@@ -36,7 +37,12 @@ const router = createBrowserRouter(
 	createRoutesFromElements(
 		<Route path="/" element={<App />}>
 			<Route index={true} path="/" element={<HomeScreen />} />
+			<Route path="/search/:keyword" element={<HomeScreen />} />
 			<Route path="/page/:pageNumber" element={<HomeScreen />} />
+			<Route
+				path="/search/:keyword/page/:pageNumber"
+				element={<HomeScreen />}
+			/>
 			<Route path="/product/:id" element={<ProductScreen />} />
 			<Route path="/cart" element={<CartScreen />} />
 			<Route path="/login" element={<LoginScreen />} />
@@ -52,6 +58,10 @@ const router = createBrowserRouter(
 			<Route path="" element={<AdminRoute></AdminRoute>}>
 				<Route path="/admin/orderlist" element={<OrderListScreen />} />
 				<Route path="/admin/productlist" element={<ProductListScreen />} />
+				<Route
+					path="/admin/productlist/:pageNumber"
+					element={<ProductListScreen />}
+				/>
 				<Route path="/admin/product/:id/edit" element={<ProductEditScreen />} />
 				<Route path="/admin/userlist" element={<UserListScreen />} />
 				<Route path="/admin/user/:id/edit" element={<UserEditScreen />} />
@@ -63,11 +73,13 @@ const router = createBrowserRouter(
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
 	<React.StrictMode>
-		<Provider store={store}>
-			<PayPalScriptProvider deferLoading={true}>
-				<RouterProvider router={router}></RouterProvider>
-			</PayPalScriptProvider>
-		</Provider>
+		<HelmetProvider>
+			<Provider store={store}>
+				<PayPalScriptProvider deferLoading={true}>
+					<RouterProvider router={router}></RouterProvider>
+				</PayPalScriptProvider>
+			</Provider>
+		</HelmetProvider>
 	</React.StrictMode>
 );
 reportWebVitals();
