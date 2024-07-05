@@ -9,11 +9,8 @@
     "server": "nodemon backend/server.js",
     "client": "npm start --prefix frontend",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "data:import": "node backend/seeder",
-    "data:destroy": "node backend/seeder -d",
-    "build": "npm run build:backend && npm run build:frontend",
-    "build:backend": "npm install",
-    "build:frontend": "npm install --prefix frontend && npm run build --prefix frontend"
+    "data:import": "node backend/seeder.js",
+    "data:destroy": "node backend/seeder.js -d"
   },
   "author": "Ashraf Uddin",
   "license": "MIT",
