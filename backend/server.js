@@ -30,7 +30,10 @@ app.use(express.urlencoded({ extended: true }));
 // Cookie Parser
 app.use(cookieParser());
 
-// Routes
+app.get('/', (req, res) => {
+  res.send('API is running...');
+});
+
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/orders', orderRoutes);
@@ -38,13 +41,15 @@ app.use('/api/upload', uploadRoutes);
 
 app.get('/api/config/paypal', (req, res) => res.send({ clientId: process.env.PAYPAL_CLIENT_ID}));
 
-// Serve static assets if in production
-if (process.env.NODE_ENV === 'production') {
-  const __dirname = path.resolve();
-  app.use(express.static(path.join(__dirname, '/frontend/build')));
+const __dirname = path.resolve(); // Set __dirname to current directory
+app.use('/uploads', express.static(path.join(__dirname, '/upload')));
 
-  app.get('*', (req, res) => 
-    res.sendFile(path.resolve(__dirname, 'frontend', 'build', 'index.html'))
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/build')));
+
+  app.get('*', (req, res) =>
+    res.sendFile(path.resolve(__dirname, '../frontend', 'build', 'index.html'))
   );
 } else {
   app.get('/', (req, res) => {
@@ -52,11 +57,10 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-const __dirname = path.resolve(); // Set __dirname to current directory
-app.use('/uploads', express.static(path.join(__dirname, '/uploads')));
-
-// Error Handling Middleware
+// Add the notFound middleware
 app.use(notFound);
+
+// Add the errorHandler middleware
 app.use(errorHandler);
 
 // Unhandled promise rejections
